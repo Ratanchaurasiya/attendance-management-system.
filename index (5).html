@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Student Attendance</title>
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    .card-container {
+      position: relative;
+      width: 300px;
+      height: 400px;
+      margin: 50px auto;
+    }
+
+    .card {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background-color: #f8f9fa;
+      border-radius: 10px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 24px;
+      font-weight: bold;
+      transition: transform 0.3s ease, opacity 0.3s ease;
+    }
+
+    .card.swipe-right {
+      transform: translateX(1000px) rotate(20deg);
+      opacity: 0;
+    }
+
+    .card.swipe-left {
+      transform: translateX(-1000px) rotate(-20deg);
+      opacity: 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container text-center mt-5">
+    <h1>Student Attendance</h1>
+    <form id="setupForm" class="mb-4">
+      <div class="mb-3">
+        <label for="division" class="form-label">Division</label>
+        <input type="text" class="form-control" id="division" required>
+      </div>
+      <div class="mb-3">
+        <label for="numStudents" class="form-label">Number of Students</label>
+        <input type="number" class="form-control" id="numStudents" required>
+      </div>
+      <div class="mb-3">
+        <label for="phoneNumber" class="form-label">Phone Number</label>
+        <input type="tel" class="form-control" id="phoneNumber" required>
+      </div>
+      <button type="submit" class="btn btn-primary">Start Attendance</button>
+    </form>
+
+    <div id="cardContainer" class="card-container d-none"></div>
+    <button id="sendWhatsApp" class="btn btn-success d-none">Send Attendance to WhatsApp</button>
+  </div>
+
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    const setupForm = document.getElementById('setupForm');
+    const cardContainer = document.getElementById('cardContainer');
+    const sendWhatsAppButton = document.getElementById('sendWhatsApp');
+    let presentStudents = [];
+    let currentStudent = 1;
+    let totalStudents = 0;
+
+    setupForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const division = document.getElementById('division').value;
+      totalStudents = parseInt(document.getElementById('numStudents').value);
+      const phoneNumber = document.getElementById('phoneNumber').value;
+
+      setupForm.classList.add('d-none');
+      cardContainer.classList.remove('d-none');
+
+      // Generate cards for students
+      for (let i = totalStudents; i >= 1; i--) {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.textContent = `Roll No: ${i}`;
+        card.dataset.rollNumber = i;
+        cardContainer.appendChild(card);
+      }
+
+      // Add swipe functionality
+      const cards = document.querySelectorAll('.card');
+      cards.forEach(card => {
+        let startX = 0;
+        let currentX = 0;
+
+        card.addEventListener('touchstart', (e) => {
+          startX = e.touches[0].clientX;
+        });
+
+        card.addEventListener('touchmove', (e) => {
+          currentX = e.touches[0].clientX - startX;
+          card.style.transform = `translateX(${currentX}px) rotate(${currentX / 10}deg)`;
+        });
+
+        card.addEventListener('touchend', () => {
+          if (currentX > 100) {
+            // Right swipe (Present)
+            card.classList.add('swipe-right');
+            presentStudents.push(card.dataset.rollNumber);
+          } else if (currentX < -100) {
+            // Left swipe (Absent)
+            card.classList.add('swipe-left');
+          } else {
+            // Reset position
+            card.style.transform = '';
+          }
+
+          currentX = 0;
+
+          // Remove card after animation
+          setTimeout(() => {
+            card.remove();
+            if (--currentStudent === 0) {
+              sendWhatsAppButton.classList.remove('d-none');
+            }
+          }, 300);
+        });
+      });
+    });
+
+    sendWhatsAppButton.addEventListener('click', () => {
+      const phoneNumber = document.getElementById('phoneNumber').value;
+      const division = document.getElementById('division').value;
+      const message = `Present students roll numbers are: ${presentStudents.join(', ')} for division ${division}`;
+      const whatsappUrl = `https://wa.me/91${phoneNumber}?text=${encodeURIComponent(message)}`;
+      window.open(whatsappUrl, '_blank');
+    });
+  </script>
+</body>
+</html>
